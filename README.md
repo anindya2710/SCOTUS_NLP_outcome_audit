@@ -59,23 +59,34 @@ python diagnostics.py
 
 Writes `results.csv`, `feature_audit.csv` and `baseline_comparison.png` and some diagnostic files. Takes about a minute.
 
+Entry 02 needs a GPU and the packages in `requirements-llm.txt` (`torch`, `transformers`, `peft`):
+
+```
+python finetune_llm.py                               # five stratified splits
+python finetune_llm.py --variant text_no_outcome
+python finetune_llm.py --temporal
+```
+
+Writes per-split results, predictions and a summary to `results_llm/`.
+
 ## Log
 
 Each entry states a hypothesis before running it, then reports the result against a fixed baseline of 0.651 accuracy and 0.500 AUC. Those two numbers do not move between entries.
 
 - [01 — TF-IDF baseline audit](01-tfidf-baseline.md) *(2026-09-09)* — leakage checks, the boilerplate hypothesis, and what has been ruled out.
+- [02 — Fine-tuned small LLM (LoRA)](02-llm-lora.md) *(2026-11-17)* — hypothesis and settings fixed; results pending.
 
 Next, in order:
 
-**02 — Frozen transformer embeddings.** Legal-BERT or a sentence-transformer as a frozen encoder, with a small classifier on the pooled representation. *Hypothesis: AUC improves to roughly 0.62–0.65, because a contextual encoder represents negation and party role that bag-of-words cannot. Accuracy probably still does not clear 0.651.*
+**03 — Frozen transformer embeddings.** Legal-BERT or a sentence-transformer as a frozen encoder, with a small classifier on the pooled representation. *Hypothesis: AUC improves to roughly 0.62–0.65, because a contextual encoder represents negation and party role that bag-of-words cannot. Accuracy probably still does not clear 0.651.*
 
-**03 — Reframed target.** Predict the disposition (affirm versus reverse) rather than which party prevailed, and restrict separately to a single issue area. *Hypothesis: a legally coherent target is more learnable than a positional one, and this is more likely to move the number than any change of representation.*
+**04 — Reframed target.** Predict the disposition (affirm versus reverse) rather than which party prevailed, and restrict separately to a single issue area. *Hypothesis: a legally coherent target is more learnable than a positional one, and this is more likely to move the number than any change of representation.*
 
-**04 — Structured features.** Reproduce the feature set the published literature actually uses, as a reference point for how much of the achievable signal lives outside the narrative text.
+**05 — Structured features.** Reproduce the feature set the published literature actually uses, as a reference point for how much of the achievable signal lives outside the narrative text.
 
-**05 — Ranking and calibration.** If the useful output is an ordering rather than a label, evaluate it as one: calibration curves, precision at k, and whether the ranking is stable across seeds.
+**06 — Ranking and calibration.** If the useful output is an ordering rather than a label, evaluate it as one: calibration curves, precision at k, and whether the ranking is stable across seeds.
 
-Stopping when AUC plateaus across two consecutive entries, or after 05.
+Stopping when AUC plateaus across two consecutive entries, or after 06.
 
 ## Data
 
