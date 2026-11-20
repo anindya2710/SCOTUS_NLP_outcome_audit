@@ -1,6 +1,8 @@
 # 02 — Fine-tuned small LLM (LoRA)
 
-**2026-11-17** (hypothesis and settings fixed before running; results pending)
+**2026-11-17** (hypothesis and settings fixed before running)
+
+**2026-11-20** (first results added)
 
 ## Question
 
@@ -58,8 +60,68 @@ alone is drawing on what it remembers.
 
 ## Result
 
-*To be filled in after running.*
+These are first results, from the single configuration fixed above. Each run
+took about six minutes on a Kaggle T4 GPU. The prediction files confirm that
+the test cases are the same ones used in entry 01.
+
+Mean of the five stratified splits, with the entry 01 models for reference:
+
+| Model | Accuracy | ±sd | AUC | ±sd | F1 (minority) |
+|---|---|---|---|---|---|
+| Majority-class baseline | 0.651 | 0.000 | 0.500 | 0.000 | 0.000 |
+| Random forest, full text (entry 01) | 0.638 | 0.007 | 0.573 | 0.015 | 0.195 |
+| Logistic regression, full text (entry 01) | 0.648 | 0.006 | 0.569 | 0.013 | 0.095 |
+| Qwen2.5-0.5B + LoRA, full text | 0.630 | 0.015 | 0.547 | 0.010 | 0.208 |
+| Qwen2.5-0.5B + LoRA, outcome language removed | 0.619 | 0.029 | 0.548 | 0.025 | 0.259 |
+
+Temporal split (train on terms up to 2011, test on the 638 cases after):
+
+| Model | Accuracy | AUC |
+|---|---|---|
+| Majority-class baseline | 0.671 | 0.500 |
+| Random forest, full text (entry 01) | 0.660 | 0.553 |
+| Qwen2.5-0.5B + LoRA, full text | 0.660 | 0.508 |
+
+Entry 01 did not report AUC for the temporal split; the 0.553 above comes from
+rerunning the entry 01 forest on the same split for this comparison.
+
+The fine-tuned model does not beat the constant on accuracy, which was
+expected. However, its AUC does not rise either. It is lower than the TF-IDF
+models', at 0.547 against 0.573, and lower than the forest's on four of the
+five splits. On the later terms, its ranking cannot be told apart from chance
+(AUC 0.508, 95% bootstrap interval 0.46–0.55).
 
 ## Reading it
 
-*To be filled in after running.*
+One would expect a pretrained language model to read these summaries better
+than a bag of words, as it can represent negation, party roles and legal
+context. In this first run, this does not prove to be the case.
+
+The model mostly predicts the majority class. It gives the first party the win
+in 82–90% of test cases, and catches between 10% and 19% of the cases the
+first party loses. Treated as a ranking, it picks up roughly the same weak
+signal as TF-IDF did: the lowest-probability fifth wins 60% of the time and
+the highest fifth 72%, against 59% and 73% in entry 01.
+
+Removing outcome language changes nothing (AUC 0.548 against 0.547), as was
+the case with TF-IDF. Thus, there is no leakage advantage here either.
+
+The memorization check was planned for reading a gain. As there is no gain to
+explain, it matters less for this result; it is still worth running if a later
+model does better.
+
+What this run does not show:
+
+- It is one small model (0.5 billion parameters) with one configuration, two
+  epochs and no tuning. A larger model or different settings would be a new
+  entry, with its own hypothesis and with any tuning done on a validation split
+  carved from the training data, never on the test fold.
+- Truncation is not the cause. Only 1.4% of summaries are longer than 512
+  tokens.
+- The training loss was printed during the run but not saved with the
+  results, so I cannot yet say whether the model underfit. Future runs will
+  save it.
+
+So far, the picture from entry 01 holds: the summaries appear to carry very
+little information about the outcome, and a stronger text model has not
+changed that. One run of one small model is not enough to settle it, however.

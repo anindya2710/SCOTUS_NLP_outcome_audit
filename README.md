@@ -74,7 +74,7 @@ Writes per-split results, predictions and a summary to `results_llm/`.
 Each entry states a hypothesis before running it, then reports the result against a fixed baseline of 0.651 accuracy and 0.500 AUC. Those two numbers do not move between entries.
 
 - [01 — TF-IDF baseline audit](01-tfidf-baseline.md) *(2026-09-09)* — leakage checks, the boilerplate hypothesis, and what has been ruled out.
-- [02 — Fine-tuned small LLM (LoRA)](02-llm-lora.md) *(2026-11-17)* — hypothesis and settings fixed; results pending.
+- [02 — Fine-tuned small LLM (LoRA)](02-llm-lora.md) *(2026-11-17; first results 2026-11-20)* — no better than TF-IDF in a first run (AUC 0.547 against 0.573).
 
 Next, in order:
 
