@@ -73,6 +73,10 @@ def load_model(cfg, device):
     tok.padding_side = "right"
 
     model = AutoModelForSequenceClassification.from_pretrained(cfg["model"], num_labels=2)
+    # Keep the weights in float32. Recent versions of transformers load Qwen in
+    # bfloat16 by default, which the T4 GPU does not support and which the
+    # float16 gradient scaler cannot handle. Mixed precision comes from autocast.
+    model = model.float()
     # The classifier reads the hidden state of the last non-padding token,
     # which it finds through pad_token_id.
     model.config.pad_token_id = tok.pad_token_id
