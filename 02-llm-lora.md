@@ -76,15 +76,20 @@ Mean of the five stratified splits, with the entry 01 models for reference:
 
 Temporal split (train on terms up to 2011, test on the 638 cases after):
 
+Temporal split (train on terms up to 2011, test on the 638 cases after), all on
+the full text:
+
 | Model | Accuracy | AUC |
 |---|---|---|
 | Majority-class baseline | 0.671 | 0.500 |
-| Random forest, full text (entry 01) | 0.660 | 0.553 |
-| Qwen2.5-0.5B + LoRA, full text | 0.660 | 0.508 |
+| Random forest, TF-IDF 1,000 features | 0.665 | 0.553 |
+| Logistic regression, TF-IDF 5,000 features | 0.646 | 0.560 |
+| Qwen2.5-0.5B + LoRA | 0.660 | 0.508 |
 
-Entry 01 did not report AUC for the temporal split; the 0.553 above comes from
-rerunning the entry 01 forest on the same split for this comparison.
-
+The two TF-IDF rows come from `temporal_audit.py` (`results_temporal.csv`),
+which runs the temporal split for every text version and both models. An
+earlier version of this table labelled the forest's accuracy as full text,
+but that 0.660 came from entry 01's run on the outcome + posture removed text.
 The fine-tuned model does not beat the constant on accuracy, which was
 expected. However, its AUC does not rise either. It is lower than the TF-IDF
 models', at 0.547 against 0.573, and lower than the forest's on four of the

@@ -42,9 +42,9 @@ Both wrong, and the second wrong in a way that took some work to see.
 | Logistic regression | 0.648 | 0.569 |
 | Logistic regression, boilerplate removed | 0.648 | 0.560 |
 
-Nothing beats the constant. The temporal split gives the same picture: 0.660
-against a 0.671 majority rate.
-
+Nothing beats the constant. The temporal split gives the same picture: on the
+full text, the random forest reaches 0.665 against a 0.671 majority rate
+(AUC 0.553), and no model or text version clears it (`results_temporal.csv`).
 ## Reading it
 
 The interesting part is the disagreement between the two columns. AUC sits
@@ -162,3 +162,12 @@ The stronger candidate may still be the target. `first_party_winner` is
 positional rather than legal, and mixes cases where the petitioner is a
 government, a corporation or an individual. Predicting the disposition directly
 is entry 03, and it may matter more than any change of features.
+
+
+## Corrections
+
+**2026-11-23.** The temporal accuracy first reported here (0.660) came from
+the random forest on the outcome + posture removed text, not the full text,
+and the text did not say so. `temporal_audit.py` now runs the temporal split
+for every text version and both models, with AUC as well as accuracy. On the
+full text, the forest reaches 0.665 (AUC 0.553). The conclusion is unchanged.

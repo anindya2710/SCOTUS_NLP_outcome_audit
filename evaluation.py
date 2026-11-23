@@ -87,6 +87,7 @@ def temporal_evaluate(df, text_col, y, model_factory, vectorizer_kwargs=None,
     x_train = vec.fit_transform(d.loc[train, text_col])
     x_test = vec.transform(d.loc[test, text_col])
     model = model_factory(0).fit(x_train, y[train])
+    proba = model.predict_proba(x_test)[:, 1]
 
     return {
         "cutoff_term": int(cutoff),
@@ -94,6 +95,7 @@ def temporal_evaluate(df, text_col, y, model_factory, vectorizer_kwargs=None,
         "n_test": int(test.sum()),
         "test_majority_rate": majority_rate(y[test]),
         "accuracy": accuracy_score(y[test], model.predict(x_test)),
+        "auc": roc_auc_score(y[test], proba),
     }
 
 

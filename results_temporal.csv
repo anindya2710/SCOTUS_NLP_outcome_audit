@@ -1,0 +1,7 @@
+model,text,cutoff_term,n_train,n_test,test_majority_rate,accuracy,auc
+"random forest (TF-IDF, 1,000 features)",full text,2011,2593,638,0.670846394984326,0.664576802507837,0.5528204272363151
+"logistic regression (TF-IDF, 5,000 features)",full text,2011,2593,638,0.670846394984326,0.64576802507837,0.5602692478860704
+"random forest (TF-IDF, 1,000 features)",outcome language removed,2011,2593,638,0.670846394984326,0.6410658307210031,0.5368435692033823
+"logistic regression (TF-IDF, 5,000 features)",outcome language removed,2011,2593,638,0.670846394984326,0.6567398119122257,0.5563640409434802
+"random forest (TF-IDF, 1,000 features)",outcome + posture removed,2011,2593,638,0.670846394984326,0.664576802507837,0.5460614152202937
+"logistic regression (TF-IDF, 5,000 features)",outcome + posture removed,2011,2593,638,0.670846394984326,0.6520376175548589,0.5593457943925233

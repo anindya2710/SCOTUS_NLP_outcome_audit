@@ -21,7 +21,7 @@ Mean of five stratified 80/20 splits. Minority class is "first party loses".
 | Logistic regression, full text | 0.648 | 0.006 | 0.569 | 0.095 |
 | Logistic regression, boilerplate removed | 0.648 | 0.006 | 0.560 | 0.098 |
 
-Under a temporal split — training on terms up to 2011, testing on 2012 onward — the model reaches 0.660 against a 0.671 majority rate on that test set. Same situation.
+Under a temporal split (training on terms up to 2011, testing on the 638 cases from 2012 onward), no model or text version beats the 0.671 majority rate on that test set; the random forest on the full text reaches 0.665 (AUC 0.553). Every combination is in `results_temporal.csv`.. Same situation.
 
 Random forest figures shift by a few thousandths across scikit-learn versions, well inside the reported spread. Logistic regression is stable.
 
