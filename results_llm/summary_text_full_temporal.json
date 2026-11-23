@@ -1,0 +1,29 @@
+{
+  "variant": "text_full",
+  "split": "temporal",
+  "accuracy": 0.6598746081504702,
+  "accuracy_sd": 0.0,
+  "auc": 0.5076045838896306,
+  "auc_sd": 0.0,
+  "f1_minority": 0.09205020920502092,
+  "majority_rate": 0.670846394984326,
+  "config": {
+    "model": "Qwen/Qwen2.5-0.5B",
+    "max_length": 512,
+    "epochs": 2,
+    "batch_size": 8,
+    "grad_accum": 2,
+    "lr": 0.0002,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.0,
+    "lora_r": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj"
+    ]
+  }
+}

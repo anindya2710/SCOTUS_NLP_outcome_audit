@@ -8,10 +8,12 @@ Three checks, each ruling something in or out:
     3. Label coherence. Whether the target is learnable at all from any
        feature, which distinguishes a noisy label from weak features.
 
-    python src/diagnostics.py
+    python diagnostics.py
+
+Writes diagnostic_generalisation.csv, diagnostic_learning_curve.csv and
+diagnostic_label_coherence.csv next to this file.
 """
 
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -22,9 +24,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
 import data as D
+
+RESULTS = Path(__file__).resolve().parent
 
 SEEDS = (0, 1, 2, 3, 4)
 FRACTIONS = (0.2, 0.4, 0.6, 0.8, 1.0)
@@ -45,7 +47,11 @@ def fit_and_score(texts, y, model, vectorizer_kwargs, train_idx, test_idx):
 
 def generalisation_gap(texts, y):
     """A model that memorises the training set and does not generalise has
-    expressive features, not informative ones."""
+    expressive features, not informative ones.
+
+    The two models are the entry 01 configurations, so they use different
+    vocabulary sizes (1,000 and 5,000 terms); the features column says which.
+    """
     configs = [
         ("random forest",
          lambda s: RandomForestClassifier(n_estimators=300, random_state=s, n_jobs=-1),
@@ -62,14 +68,17 @@ def generalisation_gap(texts, y):
                 np.arange(len(texts)), test_size=0.2, random_state=seed, stratify=y
             )
             scores.append(fit_and_score(texts, y, factory(seed), kw, tr, te))
-        rows.append({"model": name,
+        rows.append({"model": name, "features": kw["max_features"],
                      **{k: np.mean([s[k] for s in scores]) for k in scores[0]}})
     return pd.DataFrame(rows)
 
 
 def learning_curve(texts, y):
-    """Test AUC against training set size. A flat curve means the corpus is
-    not the binding constraint."""
+    """Test AUC against training set size (logistic regression, 5,000 terms).
+
+    Each smaller training set is a stratified subsample of the full training
+    fold, so the class ratio stays fixed and only the size changes.
+    """
     rows = []
     for frac in FRACTIONS:
         aucs, sizes = [], []
@@ -77,8 +86,11 @@ def learning_curve(texts, y):
             tr, te = train_test_split(
                 np.arange(len(texts)), test_size=0.2, random_state=seed, stratify=y
             )
-            rng = np.random.default_rng(seed)
-            sub = rng.choice(tr, size=int(len(tr) * frac), replace=False)
+            if frac < 1:
+                sub, _ = train_test_split(tr, train_size=frac, random_state=seed,
+                                          stratify=y[tr])
+            else:
+                sub = tr
             sizes.append(len(sub))
 
             vec = TfidfVectorizer(stop_words="english", max_features=5000)
@@ -99,10 +111,9 @@ def label_coherence():
     knowing who won. It is here only to establish that the label is a clean
     function of something, rather than noise.
     """
-    df = pd.read_csv(D.DATA_PATH).dropna(
-        subset=["facts", "first_party_winner", "disposition"]
-    )
-    grouped = df.groupby("disposition")["first_party_winner"]
+    df = D.load()
+    df = df.dropna(subset=["disposition"]).assign(win=lambda d: D.labels(d))
+    grouped = df.groupby("disposition")["win"]
     table = pd.DataFrame({
         "n": grouped.size(),
         "p_first_party_wins": grouped.mean(),
@@ -123,7 +134,7 @@ def main():
     print("1. Generalisation gap\n")
     gap = generalisation_gap(texts, y)
     print(gap.to_string(index=False, float_format=lambda v: f"{v:.3f}"))
-    gap.to_csv("diagnostic_generalisation.csv", index=False)
+    gap.to_csv(RESULTS / "diagnostic_generalisation.csv", index=False)
 
     worst = gap.loc[(gap["train_auc"] - gap["test_auc"]).idxmax()]
     print(f"\n   Largest gap: {worst['model']}, train AUC {worst['train_auc']:.3f} "
@@ -134,16 +145,17 @@ def main():
     print("\n\n2. Learning curve\n")
     curve = learning_curve(texts, y)
     print(curve.to_string(index=False, float_format=lambda v: f"{v:.3f}"))
-    curve.to_csv("diagnostic_learning_curve.csv", index=False)
+    curve.to_csv(RESULTS / "diagnostic_learning_curve.csv", index=False)
 
     gain = curve["test_auc"].iloc[-1] - curve["test_auc"].iloc[0]
-    print(f"\n   Fivefold more data moves test AUC by {gain:+.3f}.")
-    print("   More cases would not change the conclusion.")
+    print(f"\n   Fivefold more data moves test AUC by {gain:+.3f}; the spread")
+    print(f"   across seeds at each size is {curve['test_auc_sd'].min():.3f}-"
+          f"{curve['test_auc_sd'].max():.3f}.")
 
     print("\n\n3. Label coherence\n")
     table, accuracy = label_coherence()
     print(table[table["n"] >= 20].to_string(float_format=lambda v: f"{v:.3f}"))
-    table.to_csv("diagnostic_label_coherence.csv")
+    table.to_csv(RESULTS / "diagnostic_label_coherence.csv")
 
     print(f"\n   Disposition alone predicts the target at {accuracy:.3f}.")
     print("   The label is close to a deterministic function of whether the")

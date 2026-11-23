@@ -1,3 +1,11 @@
+# Entry 02 (finetune_llm.py), on a GPU. Complete on its own: the base packages
+# are listed here with loose versions rather than through requirements.txt, so
+# installing them does not pin scikit-learn in a GPU notebook. The LLM script
+# uses scikit-learn only for splits and metrics, which do not depend on the
+# version.
 torch>=2.3
 transformers>=4.40
 peft>=0.10
+scikit-learn>=1.3
+pandas>=2.0
+numpy>=1.24

@@ -8,6 +8,9 @@ Two rules apply to every entry in this project:
        corpus is roughly one accuracy point, so a single number is not a
        measurement.
 
+The temporal split is the one exception to rule 2: there is only one way to
+split on time, so the spread reported for it comes from model seeds alone.
+
 AUC is carried alongside accuracy because the two can disagree: on an
 imbalanced target a model can rank better than chance while still losing to a
 constant on accuracy.
@@ -16,8 +19,10 @@ constant on accuracy.
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, f1_score, recall_score, roc_auc_score
 from sklearn.model_selection import train_test_split
+
+import data as D
 
 SEEDS = (0, 1, 2, 3, 4)
 TEST_SIZE = 0.2
@@ -34,6 +39,13 @@ def split(n, y, seed):
     )
 
 
+def scores(model, x):
+    """P(first party wins), or a decision score for models without one."""
+    if hasattr(model, "predict_proba"):
+        return model.predict_proba(x)[:, 1]
+    return model.decision_function(x)
+
+
 def evaluate(texts, y, model_factory, vectorizer_kwargs=None, seeds=SEEDS):
     """Fit and score across seeds. Returns a dict of means and spreads.
 
@@ -41,7 +53,7 @@ def evaluate(texts, y, model_factory, vectorizer_kwargs=None, seeds=SEEDS):
     corpus first leaks test-set vocabulary and document frequencies.
     """
     vectorizer_kwargs = vectorizer_kwargs or {}
-    acc, auc, f1 = [], [], []
+    acc, auc, f1, recall = [], [], [], []
 
     for seed in seeds:
         tr, te = split(len(texts), y, seed)
@@ -54,28 +66,34 @@ def evaluate(texts, y, model_factory, vectorizer_kwargs=None, seeds=SEEDS):
 
         acc.append(accuracy_score(y[te], pred))
         f1.append(f1_score(y[te], pred, pos_label=0))  # minority class
-        if hasattr(model, "predict_proba"):
-            auc.append(roc_auc_score(y[te], model.predict_proba(x_test)[:, 1]))
+        recall.append(recall_score(y[te], pred, pos_label=0))
+        auc.append(roc_auc_score(y[te], scores(model, x_test)))
 
     return {
         "accuracy": np.mean(acc),
         "accuracy_sd": np.std(acc),
-        "auc": np.mean(auc) if auc else np.nan,
-        "auc_sd": np.std(auc) if auc else np.nan,
+        "auc": np.mean(auc),
+        "auc_sd": np.std(auc),
         "f1_minority": np.mean(f1),
+        "recall_minority": np.mean(recall),
     }
 
 
 def temporal_evaluate(df, text_col, y, model_factory, vectorizer_kwargs=None,
-                      quantile=0.8):
+                      quantile=0.8, seeds=SEEDS):
     """Train on earlier terms, test on later ones.
 
     A random split lets the model train on a mixture of eras and test on the
     same mixture. Splitting on time is the harder and more realistic check.
+
+    The 57 cases whose term is recorded as an era rather than a year are left
+    out (see data.term_year). The split itself is fixed; the model is refit
+    with each seed, and the spread comes from that alone. Logistic regression
+    is deterministic, so its spread is zero.
     """
     vectorizer_kwargs = vectorizer_kwargs or {}
     d = df.copy()
-    d["term_num"] = pd.to_numeric(d["term"], errors="coerce")
+    d["term_num"] = D.term_year(d)
     keep = d["term_num"].notna().to_numpy()
     d, y = d[keep], y[keep]
 
@@ -86,16 +104,22 @@ def temporal_evaluate(df, text_col, y, model_factory, vectorizer_kwargs=None,
     vec = TfidfVectorizer(**vectorizer_kwargs)
     x_train = vec.fit_transform(d.loc[train, text_col])
     x_test = vec.transform(d.loc[test, text_col])
-    model = model_factory(0).fit(x_train, y[train])
-    proba = model.predict_proba(x_test)[:, 1]
+
+    acc, auc = [], []
+    for seed in seeds:
+        model = model_factory(seed).fit(x_train, y[train])
+        acc.append(accuracy_score(y[test], model.predict(x_test)))
+        auc.append(roc_auc_score(y[test], scores(model, x_test)))
 
     return {
         "cutoff_term": int(cutoff),
         "n_train": int(train.sum()),
         "n_test": int(test.sum()),
         "test_majority_rate": majority_rate(y[test]),
-        "accuracy": accuracy_score(y[test], model.predict(x_test)),
-        "auc": roc_auc_score(y[test], proba),
+        "accuracy": np.mean(acc),
+        "accuracy_sd": np.std(acc),
+        "auc": np.mean(auc),
+        "auc_sd": np.std(auc),
     }
 
 
@@ -131,20 +155,25 @@ def rank_quintiles(texts, y, model_factory, vectorizer_kwargs=None, seeds=SEEDS)
 
 
 def feature_table(texts, y, model_factory, linear_factory, vectorizer_kwargs=None,
-                  top_n=25):
+                  top_n=25, seed=SEEDS[0]):
     """Terms the model leans on, with a direction attached.
 
     Tree importances are unsigned; a linear model fit on the same matrix says
     which way each term pushes. Both are needed to read the list as anything
     other than a ranking.
+
+    Fit once, on one training fold (seed 0). This describes one fitted model
+    rather than measuring anything, which makes it the second exception to
+    rule 2. supporting_checks.py checks how much of the list recurs across the
+    five seeds.
     """
     vectorizer_kwargs = vectorizer_kwargs or {}
-    tr, _ = split(len(texts), y, seeds := SEEDS[0])
+    tr, _ = split(len(texts), y, seed)
     vec = TfidfVectorizer(**vectorizer_kwargs)
     x_train = vec.fit_transform(texts[tr])
 
-    forest = model_factory(seeds).fit(x_train, y[tr])
-    linear = linear_factory(seeds).fit(x_train, y[tr])
+    forest = model_factory(seed).fit(x_train, y[tr])
+    linear = linear_factory(seed).fit(x_train, y[tr])
 
     return (
         pd.DataFrame(

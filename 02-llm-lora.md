@@ -4,6 +4,8 @@
 
 **2026-11-20** (first results added)
 
+**2026-11-23** (corrected; see Corrections at the end)
+
 ## Question
 
 Does a small open language model, fine-tuned with LoRA on the Oyez facts
@@ -25,7 +27,7 @@ context that bag-of-words cannot. Accuracy probably still does not clear
 be confidently right about the minority class to beat a constant.
 
 Some of any gain may come from pretraining rather than from the facts. Every
-case here (terms 1955–2020) predates the model, and the summaries name the
+case here predates the model, and the summaries name the
 parties, so the model may already know how famous cases ended. A gain is not
 read as skill until that is checked.
 
@@ -34,7 +36,8 @@ read as skill until that is checked.
 Unchanged from entry 01, so the numbers are directly comparable:
 
 - Same five stratified 80/20 splits (seeds 0–4, the same test cases), and the
-  same temporal split (train on terms up to 2011, test on 2012 onward).
+  same temporal split (train on terms up to 2011, test on 2012 onward; the 57
+  cases dated only by era are left out).
 - Same fixed baseline: 0.651 accuracy, 0.500 AUC.
 - Accuracy reported next to the majority rate, with AUC, minority-class F1,
   and the win rates in the lowest and highest predicted-probability fifths.
@@ -62,19 +65,19 @@ alone is drawing on what it remembers.
 
 These are first results, from the single configuration fixed above. Each run
 took about six minutes on a Kaggle T4 GPU. The prediction files confirm that
-the test cases are the same ones used in entry 01.
+the test cases are the same ones used in entry 01. The predictions are in
+`results_llm/`, and `llm_summary.py` computes every statistic quoted below
+from them (`results_llm_summary.csv`).
 
 Mean of the five stratified splits, with the entry 01 models for reference:
 
 | Model | Accuracy | ±sd | AUC | ±sd | F1 (minority) |
 |---|---|---|---|---|---|
 | Majority-class baseline | 0.651 | 0.000 | 0.500 | 0.000 | 0.000 |
-| Random forest, full text (entry 01) | 0.638 | 0.007 | 0.573 | 0.015 | 0.195 |
+| Random forest, full text (entry 01) | 0.638 | 0.007 | 0.573 | 0.016 | 0.196 |
 | Logistic regression, full text (entry 01) | 0.648 | 0.006 | 0.569 | 0.013 | 0.095 |
 | Qwen2.5-0.5B + LoRA, full text | 0.630 | 0.015 | 0.547 | 0.010 | 0.208 |
 | Qwen2.5-0.5B + LoRA, outcome language removed | 0.619 | 0.029 | 0.548 | 0.025 | 0.259 |
-
-Temporal split (train on terms up to 2011, test on the 638 cases after):
 
 Temporal split (train on terms up to 2011, test on the 638 cases after), all on
 the full text:
@@ -82,14 +85,17 @@ the full text:
 | Model | Accuracy | AUC |
 |---|---|---|
 | Majority-class baseline | 0.671 | 0.500 |
-| Random forest, TF-IDF 1,000 features | 0.665 | 0.553 |
+| Random forest, TF-IDF 1,000 features (mean of five seeds) | 0.661 | 0.555 |
 | Logistic regression, TF-IDF 5,000 features | 0.646 | 0.560 |
-| Qwen2.5-0.5B + LoRA | 0.660 | 0.508 |
+| Qwen2.5-0.5B + LoRA (one run, seed 0) | 0.660 | 0.508 |
 
-The two TF-IDF rows come from `temporal_audit.py` (`results_temporal.csv`),
-which runs the temporal split for every text version and both models. An
-earlier version of this table labelled the forest's accuracy as full text,
-but that 0.660 came from entry 01's run on the outcome + posture removed text.
+The two TF-IDF rows come from `temporal_audit.py` (`results_temporal.csv`).
+An earlier version of this table gave the forest 0.660 and labelled it full
+text; that figure came from entry 01's run on the outcome + posture removed
+text (see entry 01, Corrections). The LLM row is a single run, which breaks
+rule 2 in `evaluation.py`; `finetune_llm.py --temporal` now runs all five
+seeds.
+
 The fine-tuned model does not beat the constant on accuracy, which was
 expected. However, its AUC does not rise either. It is lower than the TF-IDF
 models', at 0.547 against 0.573, and lower than the forest's on four of the
@@ -102,14 +108,17 @@ One would expect a pretrained language model to read these summaries better
 than a bag of words, as it can represent negation, party roles and legal
 context. In this first run, this does not prove to be the case.
 
-The model mostly predicts the majority class. It gives the first party the win
-in 82–90% of test cases, and catches between 10% and 19% of the cases the
-first party loses. Treated as a ranking, it picks up roughly the same weak
+The model mostly predicts the majority class. Across the five full-text
+splits, it gives the first party the win in 82–90% of test cases, and catches
+between 10% and 19% of the cases the first party loses. Treated as a ranking, it picks up roughly the same weak
 signal as TF-IDF did: the lowest-probability fifth wins 60% of the time and
 the highest fifth 72%, against 59% and 73% in entry 01.
 
 Removing outcome language changes nothing (AUC 0.548 against 0.547), as was
-the case with TF-IDF. Thus, there is no leakage advantage here either.
+the case with TF-IDF. As entry 01 now explains, most of that language
+describes what the lower courts did rather than the Supreme Court's own
+ruling. So this shows that the model was not drawing on it, rather than that
+the text is free of leakage.
 
 The memorization check was planned for reading a gain. As there is no gain to
 explain, it matters less for this result; it is still worth running if a later
@@ -121,12 +130,45 @@ What this run does not show:
   epochs and no tuning. A larger model or different settings would be a new
   entry, with its own hypothesis and with any tuning done on a validation split
   carved from the training data, never on the test fold.
-- Truncation is not the cause. Only 1.4% of summaries are longer than 512
-  tokens.
+- The setup was simple, and some of its choices may have held the model
+  back. The summaries go in as raw text with no instruction, the new
+  classification head trains at the same learning rate as the adapters, the
+  loss is not weighted for the 65/35 imbalance, and training stops after two
+  epochs. A weak setup and a limit in the text would look the same here.
+- Truncation is not the cause. At most 1.4% of summaries are longer than 512
+  tokens (the count included summaries of exactly 512, so the true share is
+  slightly lower).
 - The training loss was printed during the run but not saved with the
-  results, so I cannot yet say whether the model underfit. Future runs will
-  save it.
+  results, so I cannot yet say whether the model underfit. Training used
+  float16 on the T4 GPU, and the number of steps skipped because of overflow
+  was not recorded either; the learning-rate schedule kept advancing through
+  any such steps. `finetune_llm.py` now saves both, and holds the schedule
+  when a step is skipped.
+- The temporal result is a single run (seed 0).
+- One summary in the outcome-removed run was empty after stripping (ID 53693;
+  its only sentence contained "held"), so the model was given an empty input
+  for it.
 
-So far, the picture from entry 01 holds: the summaries appear to carry very
-little information about the outcome, and a stronger text model has not
-changed that. One run of one small model is not enough to settle it, however.
+So far, the picture from entry 01 holds: a stronger text model has not found
+more signal in the summaries. This run cannot say whether that is because the
+summaries carry little information about the outcome or because the setup was
+too weak to find it. A better-tuned run would be needed to separate the two.
+
+## Corrections
+
+**2026-11-23.** After an outside review of the repository:
+
+- The temporal table's random forest row is now the full text (it was the
+  outcome + posture removed text) and a mean of five seeds, and a logistic
+  regression row was added.
+- The statistics quoted above (the bootstrap interval, the 82–90% and 10–19%
+  ranges, and the four-of-five comparison) had no script behind them. They are
+  now computed by `llm_summary.py` from the saved predictions, and all of them
+  reproduce. The results are now a folder (`results_llm/`) rather than a zip
+  file.
+- The limits listed under "What this run does not show" were added.
+- `finetune_llm.py` was changed as described in its docstring. The results
+  above came from the earlier version.
+- The entry 01 random forest's AUC spread is now 0.016 and its minority F1
+  0.196 (previously 0.015 and 0.195), after all outputs were regenerated with
+  scikit-learn 1.4.2.
