@@ -1,6 +1,10 @@
-# Random forest results depend on the scikit-learn version; every number in
-# this repository was produced with 1.4.2 (see README). It needs Python 3.9-3.12.
-scikit-learn==1.4.2
+# Random forest results depend on the scikit-learn version. Every number in
+# this repository was produced with 1.4.2, which is installed on Python 3.12 or
+# earlier. It has no build for Python 3.13 and later, so a newer version is
+# installed there instead, and the random forest figures shift slightly (see
+# README).
+scikit-learn==1.4.2; python_version < "3.13"
+scikit-learn>=1.5; python_version >= "3.13"
 pandas>=2.0
 numpy>=1.24
 matplotlib>=3.7

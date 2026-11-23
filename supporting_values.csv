@@ -11,17 +11,21 @@ check,value
 "mean TF-IDF weight among summaries that contain it, abortion",0.2375095971770238
 term with the highest mean TF-IDF weight,court
 outcome-language sentences removed,4912
-of which name a lower court,3700
-share naming a lower court,0.753257328990228
-of which name the U.S. Supreme Court explicitly,5
+of which name a lower court and not the U.S. Supreme Court,3582
+share naming a lower court and not the U.S. Supreme Court,0.7292345276872965
+of which mention the U.S. Supreme Court (any wording),268
+share mentioning the U.S. Supreme Court,0.05456026058631922
+of which mention the U.S. Supreme Court and also a lower court,121
+of which name no court,1062
+share naming no court,0.21620521172638438
 top-25 terms (seed 0) that are in the top 25 for all five seeds,18
 seeds with 'court' in the top 25,5
 seeds with 'held' in the top 25,5
 seeds with 'reversed' in the top 25,5
 seeds with 'affirmed' in the top 25,5
 "strict: characters retained, full text",1.0
-"strict: characters retained, outcome language removed",0.7707192696449654
-"strict: characters retained, outcome + posture removed",0.6244705749295001
+"strict: characters retained, outcome language removed",0.7695647148083231
+"strict: characters retained, outcome + posture removed",0.6223884953669503
 "strict: empty summaries, full text",0
-"strict: empty summaries, outcome language removed",3
-"strict: empty summaries, outcome + posture removed",24
+"strict: empty summaries, outcome language removed",4
+"strict: empty summaries, outcome + posture removed",25

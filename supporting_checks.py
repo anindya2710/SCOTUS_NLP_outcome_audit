@@ -45,14 +45,26 @@ STATES = (
     "missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|"
     "new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|"
     "rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|"
-    "virginia|washington|west virginia|wisconsin|wyoming|state"
+    "virginia|washington|west virginia|wisconsin|wyoming|puerto rico|guam|"
+    "virgin islands|state"
 )
 LOWER_COURT = (
     r"court of appeals|circuit|district court|trial court|lower court|"
     r"appellate court|superior court|state court|court of criminal appeals|"
     rf"\b({STATES})('s)? supreme court|supreme court of ({STATES})\b"
 )
-US_SUPREME_COURT = r"(united states|u\.s\.) supreme court|supreme court of the united states"
+# A state's highest court. West Virginia's is the "Supreme Court of Appeals".
+STATE_SUPREME_COURT = (
+    rf"\b({STATES})('s)? supreme court|supreme court of ({STATES})\b|"
+    r"supreme court of appeals"
+)
+
+
+def names_us_supreme_court(sentence):
+    """Any mention of the Supreme Court that is not a state's supreme court.
+    Oyez usually writes plain "the Supreme Court" for the U.S. Supreme Court."""
+    rest = re.sub(STATE_SUPREME_COURT, " ", sentence, flags=re.I)
+    return re.search(r"supreme court", rest, re.I) is not None
 
 
 def rf(n_trees, balanced=False):
@@ -127,6 +139,10 @@ def cleaning_check():
     for col, label in D.VARIANTS.items():
         rows.append({"split": "temporal", "model": f"random forest, {label}",
                      **E.temporal_evaluate(df, col, y, forest, TFIDF)})
+        rows.append({"split": "temporal", "model": f"logistic regression, {label}",
+                     **E.temporal_evaluate(df, col, y, linear, TFIDF_WIDE)})
+    rows.append({"split": "temporal", "model": "logistic regression, boilerplate removed",
+                 **E.temporal_evaluate(df, "text_full", y, linear, TFIDF_BOILERPLATE)})
     out = pd.DataFrame(rows)
     out.insert(2, "majority_rate", np.where(out["split"] == "stratified", E.majority_rate(y),
                                             out.get("test_majority_rate")))
@@ -175,16 +191,27 @@ def idf_figures(texts):
 
 
 def outcome_strip(df):
-    """What the outcome-language strip removes, in the default cleaning."""
+    """What the outcome-language strip removes, in the default cleaning.
+
+    The Supreme Court mentions include earlier rulings cited as precedent and
+    earlier steps in the same case (granting review, sending it back), as well
+    as some that describe the decision itself; this count does not separate
+    them.
+    """
     sents = [s for t in df["text_full"] for s in D.split_sentences(t)
              if re.search(D.OUTCOME_TERMS, s, re.I)]
-    lower = sum(bool(re.search(LOWER_COURT, s, re.I)) for s in sents)
-    us = sum(bool(re.search(US_SUPREME_COURT, s, re.I)) for s in sents)
+    lower = np.array([bool(re.search(LOWER_COURT, s, re.I)) for s in sents])
+    us = np.array([names_us_supreme_court(s) for s in sents])
+    n = len(sents)
     return {
-        "outcome-language sentences removed": len(sents),
-        "of which name a lower court": lower,
-        "share naming a lower court": lower / len(sents),
-        "of which name the U.S. Supreme Court explicitly": us,
+        "outcome-language sentences removed": n,
+        "of which name a lower court and not the U.S. Supreme Court": int((lower & ~us).sum()),
+        "share naming a lower court and not the U.S. Supreme Court": (lower & ~us).mean(),
+        "of which mention the U.S. Supreme Court (any wording)": int(us.sum()),
+        "share mentioning the U.S. Supreme Court": us.mean(),
+        "of which mention the U.S. Supreme Court and also a lower court": int((us & lower).sum()),
+        "of which name no court": int((~us & ~lower).sum()),
+        "share naming no court": (~us & ~lower).mean(),
     }
 
 

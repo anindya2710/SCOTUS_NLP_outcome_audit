@@ -58,9 +58,10 @@ STRICT_PROCEDURAL_TERMS = (
 )
 
 # Full stops that do not end a sentence. Errs toward longer sentences: "U.S."
-# at the end of a sentence joins it to the next one.
+# at the end of a sentence joins it to the next one. Longer forms come first
+# ("U.S.C" before "U.S"), because the first alternative that matches wins.
 ABBREVIATIONS = (
-    r"\b(?:v|vs|U\.S|U\.S\.C|Mr|Ms|Mrs|Dr|Co|Corp|Inc|Ltd|St|Jr|Sr|No|Nos|"
+    r"\b(?:v|vs|U\.S\.C|U\.S|Mr|Ms|Mrs|Dr|Co|Corp|Inc|Ltd|St|Jr|Sr|No|Nos|"
     r"Stat|Fed|App|Cir|Ct|Art|Sec|Gen|Gov|Rep|Sen|Lt|Sgt|Capt|Col|Mt|Ft|al|etc|"
     r"e\.g|i\.e|Cal|Ill|Pa|Tex|Fla|Mass|Mich|Wash|Va|Ga|Ala|Miss|La|Ky|Tenn|"
     r"Md|Conn|Ariz|Colo|Okla|Wis|Minn|Mo|Ind|Neb|Kan|Ore|Nev)\."

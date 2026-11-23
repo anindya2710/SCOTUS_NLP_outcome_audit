@@ -65,9 +65,11 @@ alone is drawing on what it remembers.
 
 These are first results, from the single configuration fixed above. Each run
 took about six minutes on a Kaggle T4 GPU. The prediction files confirm that
-the test cases are the same ones used in entry 01. The predictions are in
-`results_llm/`, and `llm_summary.py` computes every statistic quoted below
-from them (`results_llm_summary.csv`).
+the test cases are the same ones used in entry 01. The results are in
+`results_llm/`. The accuracy, AUC and truncation figures below are in those
+files as written by the run, and `llm_summary.py` computes everything else
+quoted below from the saved predictions (`results_llm_summary.csv` and
+`results_llm_stability.csv`).
 
 Mean of the five stratified splits, with the entry 01 models for reference:
 
@@ -135,6 +137,12 @@ What this run does not show:
   classification head trains at the same learning rate as the adapters, the
   loss is not weighted for the 65/35 imbalance, and training stops after two
   epochs. A weak setup and a limit in the text would look the same here.
+- Its predictions are also less stable than the forest's. For the 875 cases
+  that fall in two or more of the five test folds, its predicted probability
+  for the same case varies about twice as much between splits (median range
+  0.11 against 0.05). For 1.4% of them it moves by more than 0.5, which never
+  happens with the forest (`results_llm_stability.csv`). That fits an
+  unstable setup at least as well as a lack of signal.
 - Truncation is not the cause. At most 1.4% of summaries are longer than 512
   tokens (the count included summaries of exactly 512, so the true share is
   slightly lower).
@@ -166,7 +174,9 @@ too weak to find it. A better-tuned run would be needed to separate the two.
   now computed by `llm_summary.py` from the saved predictions, and all of them
   reproduce. The results are now a folder (`results_llm/`) rather than a zip
   file.
-- The limits listed under "What this run does not show" were added.
+- The limits listed under "What this run does not show" were added, including
+  (in a second pass the same day) how much its predictions vary between
+  splits.
 - `finetune_llm.py` was changed as described in its docstring. The results
   above came from the earlier version.
 - The entry 01 random forest's AUC spread is now 0.016 and its minority F1

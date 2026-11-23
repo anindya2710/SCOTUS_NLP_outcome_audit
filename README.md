@@ -23,7 +23,7 @@ Mean of five stratified 80/20 splits. Minority class is "first party loses". The
 
 Under a temporal split (training on terms up to 2011, testing on the 638 cases from 2012 onward), no model or text version beats the 0.671 majority rate on that test set. The random forest on the full text reaches 0.661 (AUC 0.555, mean of five seeds). All seven combinations are in `results_temporal.csv`. The 57 cases dated only by era are left out of this split (see Data).
 
-Random forest results depend on the scikit-learn version. Every number here was produced with scikit-learn 1.4.2, which `requirements.txt` pins (it needs Python 3.12 or earlier). With version 1.5 or later, the random forest figures in the table above move by up to 0.008 in accuracy and 0.005 in AUC, and none of them beats the baseline under either version. Logistic regression does not change.
+Random forest results depend on the scikit-learn version. Every number here was produced with scikit-learn 1.4.2, which `requirements.txt` installs on Python 3.12 or earlier. Version 1.4.2 cannot be installed on Python 3.13 and later, so a newer version is installed there instead. With version 1.5 or later, the random forest figures in the table above move by up to 0.008 in accuracy and 0.005 in AUC, and none of them beats the baseline under either version. Logistic regression does not change.
 
 ## Why accuracy sits below the baseline
 
@@ -101,4 +101,4 @@ Code in this repository is MIT licensed (see `LICENSE`). The dataset is third-pa
 
 ## Corrections
 
-Each entry keeps its own record. On 2026-11-23, an outside review found mislabelled figures, numbers with no script behind them, a confounded ablation and errors in the text cleaning. All are corrected or documented in entries 01 and 02, and none changes the conclusion. Every output was regenerated with scikit-learn 1.4.2.
+Each entry keeps its own record. On 2026-11-23, an outside review found mislabelled figures, numbers with no script behind them, a confounded ablation and errors in the text cleaning. All are corrected or documented in entries 01 and 02, and none changes the conclusion. Every output was regenerated with scikit-learn 1.4.2. A second review the same day found two errors in the code added for those corrections, both now fixed (entry 01, Corrections).

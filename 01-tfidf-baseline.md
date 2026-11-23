@@ -73,10 +73,13 @@ The strip removed 20.5% of the corpus for outcome language and a further 16.1%
 for posture, and changed accuracy by less than a point.
 
 Reading the removed sentences more closely changes what this shows. Of the
-4,912 sentences removed as outcome language, 3,700 (75%) name a lower court,
-as in "The Court of Appeals affirmed"; only five name the U.S. Supreme Court
-explicitly. Most of what was removed is therefore procedural history, which is
-known before the Supreme Court rules, and is not leakage.
+4,912 sentences removed as outcome language, 3,582 (73%) name a lower court
+and not the Supreme Court, as in "The Court of Appeals affirmed", and 1,062
+(22%) name no court at all. Only 268 (5%) mention the Supreme Court. Most of
+those cite one of its earlier decisions or describe an earlier step in the
+same case, such as granting review or sending the case back; a few describe
+the ruling itself. Most of what was removed is therefore procedural history,
+which is known before the Supreme Court rules, and is not leakage.
 
 The model's coefficients agree. *Reversed*, *held* and *affirmed* all push the
 logistic regression toward a first-party win. For *affirmed*, that only makes
@@ -239,11 +242,18 @@ of it changes the conclusion.
   word patterns matched more than intended ("affirmative action", "vacation",
   "held in jail"). Sentences were split at abbreviations such as "v." and
   "U.S.". Rerunning with all three fixed (`strict=True` in `data.py`) gives the
-  same picture: best accuracy 0.648 against 0.651, AUC 0.543–0.576, and no
-  temporal result above 0.671 (`results_cleaning_check.csv`). The numbers in
-  this entry are left as originally run.
+  same picture: best accuracy 0.648 against 0.651, AUC 0.547–0.576, and no
+  temporal result above 0.671 for any model (`results_cleaning_check.csv`).
+  The numbers in this entry are left as originally run.
 - **Other.** The data covers 1789–2020, not only 1955–2020: 57 older cases are
   dated by era and are left out of the temporal split. One narrative appears
   twice. The boilerplate list has 37 terms, not 36. All outputs were
   regenerated with scikit-learn 1.4.2, which moved a few spreads in the third
   decimal.
+- **Second pass, same day.** A further review found two errors in the code
+  added for these corrections. The strict cleaning still split sentences after
+  "U.S.C.", because the pattern for "U.S." matched first. The count of
+  sentences naming the Supreme Court only caught its full name, while Oyez
+  usually writes "the Supreme Court", so the first version of the leakage
+  paragraph above said that only five sentences named it. Both are fixed, and
+  the figures above are from the corrected code.

@@ -250,9 +250,16 @@ def main():
     print(f"{tag} on {device}, model {cfg['model']}, {len(df)} cases", flush=True)
 
     tok = load_tokenizer(cfg)
-    enc = tok(list(texts), truncation=True, max_length=cfg["max_length"])
-    n_tokens = np.array([len(ids) for ids in tok(list(texts))["input_ids"]])
-    over = float(np.mean(n_tokens > cfg["max_length"]))
+    full = tok(list(texts))  # untruncated, to count the long summaries
+    over = float(np.mean([len(ids) > cfg["max_length"] for ids in full["input_ids"]]))
+    if tok.num_special_tokens_to_add() == 0:
+        # Qwen adds no special tokens, so cutting each sequence at max_length
+        # is the same as truncating it, and the corpus is tokenized only once.
+        enc = {k: [v[:cfg["max_length"]] for v in full[k]] for k in ("input_ids", "attention_mask")}
+    else:
+        # A tokenizer that adds special tokens must truncate for itself, so
+        # that they are kept.
+        enc = tok(list(texts), truncation=True, max_length=cfg["max_length"])
     print(f"{over:.1%} of summaries are longer than {cfg['max_length']} tokens "
           f"and are truncated", flush=True)
 

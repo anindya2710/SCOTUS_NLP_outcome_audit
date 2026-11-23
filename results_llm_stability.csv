@@ -1,0 +1,3 @@
+model,cases_in_two_or_more_test_folds,median_range_of_probability,share_with_range_above_0.5,share_where_predicted_label_flips
+Qwen2.5-0.5B + LoRA,875,0.10755899999999996,0.013714285714285714,0.15428571428571428
+random forest (entry 01),875,0.050000000000000044,0.0,0.11085714285714286
