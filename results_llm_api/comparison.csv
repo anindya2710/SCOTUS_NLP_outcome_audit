@@ -1,0 +1,4 @@
+a,b,n_cases,correct_a,correct_b,accuracy_a,accuracy_b,only_a_correct,only_b_correct,mcnemar_p
+summary (facts),always first party,638,484,428,0.7586206896551724,0.670846394984326,139,83,0.00020787198607342174
+"name only, unknown as first (name)",always first party,638,469,428,0.7351097178683386,0.670846394984326,85,44,0.0003871551339548363
+summary (facts),"name only, unknown as first (name)",638,484,469,0.7586206896551724,0.7351097178683386,94,79,0.2871181950978105
