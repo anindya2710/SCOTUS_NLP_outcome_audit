@@ -1,0 +1,5 @@
+# Entry 03 (llm_api_baseline.py). Calls a hosted model, so it needs no GPU and
+# no scikit-learn; it also needs an Anthropic API key (see README).
+anthropic>=2.14
+pandas>=2.0
+numpy>=1.24

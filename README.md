@@ -2,7 +2,7 @@
 
 We are trying to answer if a text classifier can predict which side is victorious in a Court case from a summary of its facts.
 
-Based on this dataset, no. We have tried a TF-IDF and Random Forest pipeline and it reaches a **63.8% accuracy against a majority-class baseline of 65.1%**. We tested five configurations and none clear the baseline.
+Based on this dataset, no. We have tried a TF-IDF and Random Forest pipeline and it reaches a **63.8% accuracy against a majority-class baseline of 65.1%**. We tested five configurations and none clear the baseline. A commercial LLM asked directly does clear it on later cases (entry 03), but it does almost as well from the case name alone, so its accuracy reflects what it already knows about the cases rather than what it reads in the summaries.
 
 While the pipeline produces a confident-looking ranking of words that supposedly "drive judicial outcomes", it has no demonstrated predictive skill at all. This is a record of the checks that show that, and also what I am trying next.
 
@@ -72,24 +72,37 @@ python finetune_llm.py --temporal                    # five seeds
 
 Writes per-run results, predictions, the training loss and a summary to `results_llm/`.
 
+Entry 03 calls a commercial model through its API. It needs an Anthropic API key and the packages in `requirements-api.txt`:
+
+```
+pip install -r requirements-api.txt
+export ANTHROPIC_API_KEY="..."                           # PowerShell: $env:ANTHROPIC_API_KEY = "..."
+python llm_api_baseline.py --prompt facts --limit 20     # check that the API calls work
+python llm_api_baseline.py --prompt facts
+python llm_api_baseline.py --prompt name
+```
+
+Writes each answer to `results_llm_api/` as it arrives, so a run that stops resumes without asking any case twice. Both runs together cost a few cents.
+
 ## Log
 
 Each entry states a hypothesis before running it, then reports the result against a fixed baseline of 0.651 accuracy and 0.500 AUC. Those two numbers do not move between entries.
 
 - [01 — TF-IDF baseline audit](01-tfidf-baseline.md) *(2026-09-09; corrected 2026-11-23)* — leakage checks, the boilerplate hypothesis, and what has been ruled out.
 - [02 — Fine-tuned small LLM (LoRA)](02-llm-lora.md) *(2026-11-17; first results 2026-11-20; corrected 2026-11-23)* — no better than TF-IDF in a first run (AUC 0.547 against 0.573).
+- [03 — Zero-shot commercial LLM through its API](03-llm-api-zero-shot.md) *(2026-11-24; results 2026-11-24)* — beats the majority rate from the summaries (0.759 against 0.671), but does almost as well from the case name alone (0.747 on the cases it answers); no sign that it reads the summaries.
 
 Next, in order:
 
-**03 — Frozen transformer embeddings.** Legal-BERT or a sentence-transformer as a frozen encoder, with a small classifier on the pooled representation. *Hypothesis: AUC improves to roughly 0.62–0.65, because a contextual encoder represents negation and party role that bag-of-words cannot. Accuracy probably still does not clear 0.651.*
+**04 — Frozen transformer embeddings.** Legal-BERT or a sentence-transformer as a frozen encoder, with a small classifier on the pooled representation. *Hypothesis: AUC improves to roughly 0.62–0.65, because a contextual encoder represents negation and party role that bag-of-words cannot. Accuracy probably still does not clear 0.651.*
 
-**04 — One issue area at a time.** Fit the same models within a single area of law, starting with the two largest (criminal procedure, 859 cases; civil rights, 568). *Hypothesis: within one area, the same words mean more consistent things, so AUC rises above the pooled 0.573; the smaller samples may cancel that out.* The earlier plan to predict the disposition (affirm versus reverse) instead of the winner has been dropped: the two agree in 96.8% of cases (entry 01), so it would be nearly the same target.
+**05 — One issue area at a time.** Fit the same models within a single area of law, starting with the two largest (criminal procedure, 859 cases; civil rights, 568). *Hypothesis: within one area, the same words mean more consistent things, so AUC rises above the pooled 0.573; the smaller samples may cancel that out.* The earlier plan to predict the disposition (affirm versus reverse) instead of the winner has been dropped: the two agree in 96.8% of cases (entry 01), so it would be nearly the same target.
 
-**05 — Structured features.** Reproduce the feature set the published literature actually uses, as a reference point for how much of the achievable signal lives outside the narrative text.
+**06 — Structured features.** Reproduce the feature set the published literature actually uses, as a reference point for how much of the achievable signal lives outside the narrative text.
 
-**06 — Ranking and calibration.** If the useful output is an ordering rather than a label, evaluate it as one: calibration curves, precision at k, and whether the ranking is stable across seeds.
+**07 — Ranking and calibration.** If the useful output is an ordering rather than a label, evaluate it as one: calibration curves, precision at k, and whether the ranking is stable across seeds.
 
-Stopping when AUC plateaus across two consecutive entries, or after 06.
+Stopping when AUC plateaus across two consecutive entries, or after 07.
 
 ## Data
 
