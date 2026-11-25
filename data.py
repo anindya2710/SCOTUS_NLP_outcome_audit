@@ -132,7 +132,7 @@ def add_variants(df, strict=False):
     """Attach three progressively more conservative versions of the text.
 
     A few summaries lose every sentence and become empty strings (1 and 13 in
-    the default mode, 3 and 24 in the strict one).
+    the default mode, 4 and 25 in the strict one).
     """
     df = df.copy()
     outcome = [is_strict_outcome] if strict else [OUTCOME_TERMS]

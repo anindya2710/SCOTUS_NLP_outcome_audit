@@ -26,16 +26,28 @@ Setup (Windows PowerShell; on macOS or Linux use `export` instead of `$env:`):
 
 Answers are saved to results_llm_api/<prompt>.jsonl as they arrive, so a run
 that stops part-way resumes where it left off and no case is paid for twice.
-Each run updates results_llm_api/summary.csv. Once both prompts have been run,
-it also writes results_llm_api/memory_split.csv: accuracy from the summaries,
-split by whether the name-only answer for the same case was correct, wrong or
-unknown.
+A run whose answers are all saved makes no API calls; it only recomputes the
+figures. Each full run updates results_llm_api/summary.csv. Once both prompts
+have been run, it also writes:
+
+comparison.csv
+    The two prompts and the constant "the first party wins" on all the same
+    cases, compared in pairs with an exact McNemar test. A reply other than
+    first or second counts as "first", the more common winner.
+memory_split.csv
+    Accuracy from the summaries, split by whether the name-only answer for the
+    same case was correct, wrong or unknown, next to the first party's win
+    rate in each group (the accuracy of always answering "first" there).
+
+A run with --limit prints its figures but writes none of these files, so a
+quick check cannot overwrite the results of a full run.
 """
 
 import argparse
 import json
 import re
 from datetime import date
+from math import comb
 from pathlib import Path
 
 import numpy as np
@@ -131,11 +143,61 @@ def summarize(rows, y_by_id, prompt):
     }
 
 
+def mcnemar_exact(b, c):
+    """Two-sided exact McNemar p-value from the two discordant counts."""
+    b, c = int(b), int(c)
+    n, k = b + c, min(b, c)
+    if n == 0:
+        return 1.0
+    return min(1.0, 2 * sum(comb(n, i) for i in range(k + 1)) / 2 ** n)
+
+
+def comparison(facts_rows, name_rows, y_by_id):
+    """The two prompts and the constant on the same cases, compared in pairs.
+
+    Unlike memory_split, the comparison uses no grouping that depends on the
+    true outcome, so every predictor here is one that could actually be used.
+    """
+    ids = [i for i in y_by_id if i in facts_rows and i in name_rows]
+    y = np.array([y_by_id[i] for i in ids]).astype(bool)
+
+    def says_first(rows):
+        # Anything but "second" counts as "first", the more common winner.
+        return np.array([rows[i]["answer"] != "second" for i in ids])
+
+    correct = {
+        "summary (facts)": says_first(facts_rows) == y,
+        "name only, unknown as first (name)": says_first(name_rows) == y,
+        "always first party": y.copy(),
+    }
+    pairs = [("summary (facts)", "always first party"),
+             ("name only, unknown as first (name)", "always first party"),
+             ("summary (facts)", "name only, unknown as first (name)")]
+    out = []
+    for a, b in pairs:
+        only_a = int((correct[a] & ~correct[b]).sum())
+        only_b = int((~correct[a] & correct[b]).sum())
+        out.append({
+            "a": a, "b": b, "n_cases": len(ids),
+            "correct_a": int(correct[a].sum()), "correct_b": int(correct[b].sum()),
+            "accuracy_a": float(correct[a].mean()), "accuracy_b": float(correct[b].mean()),
+            "only_a_correct": only_a, "only_b_correct": only_b,
+            "mcnemar_p": mcnemar_exact(only_a, only_b),
+        })
+    return pd.DataFrame(out)
+
+
 def memory_split(facts_rows, name_rows, y_by_id):
     """Accuracy from the summaries, grouped by the name-only answer.
 
     If the model does well from the summaries only where it already knew the
     winner from the name, its accuracy comes from memory, not from reading.
+
+    The "name correct" and "name wrong" groups are defined partly by the true
+    outcome, so the side that wins most often differs between them. Each group
+    is therefore compared with the first party's win rate, the accuracy of the
+    one constant that could be used without knowing the outcome, and not with
+    that group's own majority rate.
     """
     groups = {"name correct": [], "name wrong": [], "name unknown": []}
     for i, y in y_by_id.items():
@@ -158,7 +220,7 @@ def memory_split(facts_rows, name_rows, y_by_id):
             "n_facts_answered": len(answered),
             "facts_accuracy": float(np.mean([(a == "first") == bool(y) for a, y in answered]))
                               if answered else float("nan"),
-            "majority_rate": float(max(ys.mean(), 1 - ys.mean())) if answered else float("nan"),
+            "first_party_win_rate": float(ys.mean()) if answered else float("nan"),
         })
     return pd.DataFrame(out)
 
@@ -212,19 +274,28 @@ def main():
     for key, value in s.items():
         print(f"{key:>24}: {value:.3f}" if isinstance(value, float) else f"{key:>24}: {value}")
 
-    summary_path = OUT_DIR / "summary.csv"
-    old = pd.read_csv(summary_path) if summary_path.exists() else pd.DataFrame()
-    if not old.empty:
-        old = old[old["prompt"] != args.prompt]
-    pd.concat([old, pd.DataFrame([s])]).to_csv(summary_path, index=False)
+    write = not args.limit       # a quick check must not overwrite full results
+    if write:
+        summary_path = OUT_DIR / "summary.csv"
+        old = pd.read_csv(summary_path) if summary_path.exists() else pd.DataFrame()
+        if not old.empty:
+            old = old[old["prompt"] != args.prompt]
+        pd.concat([old, pd.DataFrame([s])]).to_csv(summary_path, index=False)
 
     facts_done = load_done(OUT_DIR / "facts.jsonl")
     name_done = load_done(OUT_DIR / "name.jsonl")
     if facts_done and name_done:
+        comp = comparison(facts_done, name_done, y_by_id)
+        print("\nThe two prompts and the constant on the same cases, in pairs:")
+        print(comp.to_string(index=False, float_format="%.3f"))
         split = memory_split(facts_done, name_done, y_by_id)
         print("\nAccuracy from the summaries, by the name-only answer:")
         print(split.to_string(index=False, float_format="%.3f"))
-        split.to_csv(OUT_DIR / "memory_split.csv", index=False)
+        if write:
+            comp.to_csv(OUT_DIR / "comparison.csv", index=False)
+            split.to_csv(OUT_DIR / "memory_split.csv", index=False)
+    if not write:
+        print("\n(--limit run: figures printed only; no results files written)")
 
 
 if __name__ == "__main__":

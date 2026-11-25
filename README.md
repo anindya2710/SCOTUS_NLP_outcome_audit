@@ -2,7 +2,7 @@
 
 We are trying to answer if a text classifier can predict which side is victorious in a Court case from a summary of its facts.
 
-Based on this dataset, no. We have tried a TF-IDF and Random Forest pipeline and it reaches a **63.8% accuracy against a majority-class baseline of 65.1%**. We tested five configurations and none clear the baseline. A commercial LLM asked directly does clear it on later cases (entry 03), but it does almost as well from the case name alone, so its accuracy reflects what it already knows about the cases rather than what it reads in the summaries.
+Based on this dataset, no. We have tried a TF-IDF and Random Forest pipeline and it reaches a **63.8% accuracy against a majority-class baseline of 65.1%**. We tested five configurations and none clear the baseline. A small open language model fine-tuned on the summaries (Qwen2.5-0.5B with LoRA, entry 02) does no better. A commercial LLM asked directly does clear it on later cases (entry 03), but most of its gain is available from the case name alone, without the summary.
 
 While the pipeline produces a confident-looking ranking of words that supposedly "drive judicial outcomes", it has no demonstrated predictive skill at all. This is a record of the checks that show that, and also what I am trying next.
 
@@ -90,7 +90,7 @@ Each entry states a hypothesis before running it, then reports the result agains
 
 - [01 — TF-IDF baseline audit](01-tfidf-baseline.md) *(2026-09-09; corrected 2026-11-23)* — leakage checks, the boilerplate hypothesis, and what has been ruled out.
 - [02 — Fine-tuned small LLM (LoRA)](02-llm-lora.md) *(2026-11-17; first results 2026-11-20; corrected 2026-11-23)* — no better than TF-IDF in a first run (AUC 0.547 against 0.573).
-- [03 — Zero-shot commercial LLM through its API](03-llm-api-zero-shot.md) *(2026-11-24; results 2026-11-24)* — beats the majority rate from the summaries (0.759 against 0.671), but does almost as well from the case name alone (0.747 on the cases it answers); no sign that it reads the summaries.
+- [03 — Zero-shot commercial LLM through its API](03-llm-api-zero-shot.md) *(2026-11-24; results 2026-11-24; corrected 2026-11-24)* — beats the majority rate from the summaries (0.759 against 0.671), but most of the gain is there from the case name alone (0.735); the summaries add 2.4 points, which a paired test cannot tell from chance.
 
 Next, in order:
 
@@ -114,4 +114,4 @@ Code in this repository is MIT licensed (see `LICENSE`). The dataset is third-pa
 
 ## Corrections
 
-Each entry keeps its own record. On 2026-11-23, an outside review found mislabelled figures, numbers with no script behind them, a confounded ablation and errors in the text cleaning. All are corrected or documented in entries 01 and 02, and none changes the conclusion. Every output was regenerated with scikit-learn 1.4.2. A second review the same day found two errors in the code added for those corrections, both now fixed (entry 01, Corrections).
+Each entry keeps its own record. On 2026-11-23, an outside review found mislabelled figures, numbers with no script behind them, a confounded ablation and errors in the text cleaning. All are corrected or documented in entries 01 and 02, and none changes the conclusion. Every output was regenerated with scikit-learn 1.4.2. A second review the same day found two errors in the code added for those corrections, both now fixed (entry 01, Corrections). On 2026-11-24, a review of entry 03 found that its memory check compared groups with a baseline no single constant could reach; the comparison is corrected and the reading softened (entry 03, Corrections).
